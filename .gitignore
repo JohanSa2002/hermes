@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# Node / Frontend
+node_modules/
+dist/
+.cache/
+*.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+*.xml
+
+# Alembic
+# (keep versions tracked)
+
+# Claude Code local settings
+.claude/
+
+# Logs
+*.log
+logs/
+
+# Docker
+*.override.yml
