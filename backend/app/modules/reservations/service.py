@@ -5,8 +5,10 @@ from fastapi import HTTPException, status
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.business.service import get_business_config
-from app.modules.calendar.service import invalidate_slots_cache
+from sqlalchemy import func
+
+from app.modules.business.service import get_business_config, list_table_types
+from app.modules.calendar.service import find_best_table_for_party, invalidate_slots_cache
 from app.modules.reservations.models import Reservation
 from app.modules.reservations.schemas import ReservationCreate, ReservationUpdate
 
@@ -55,6 +57,34 @@ async def create_reservation(
     config = await get_business_config(db, business_id)
     time_end = _compute_time_end(data.time_start, config.slot_duration)
 
+    # Asignar mesa automáticamente si el negocio tiene tipos de mesa configurados
+    table_type_id = None
+    table_types = await list_table_types(db, business_id)
+    if table_types:
+        # Contar reservas por table_type en ese slot
+        result = await db.execute(
+            select(Reservation.table_type_id, func.count(Reservation.id))
+            .where(
+                and_(
+                    Reservation.business_id == business_id,
+                    Reservation.date == data.date,
+                    Reservation.time_start == data.time_start,
+                    Reservation.status.in_(["pending", "confirmed"]),
+                    Reservation.table_type_id.isnot(None),
+                )
+            )
+            .group_by(Reservation.table_type_id)
+        )
+        slot_table_counts = {row[0]: row[1] for row in result.all()}
+
+        best_table = await find_best_table_for_party(table_types, slot_table_counts, data.party_size)
+        if best_table is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="No hay mesas disponibles para ese número de personas en ese horario.",
+            )
+        table_type_id = best_table.id
+
     reservation = Reservation(
         business_id=business_id,
         client_name=data.client_name,
@@ -66,6 +96,7 @@ async def create_reservation(
         source=data.source,
         notes=data.notes,
         status="pending",
+        table_type_id=table_type_id,
     )
     db.add(reservation)
     await db.commit()

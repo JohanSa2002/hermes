@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
-import { format, addDays, startOfWeek, isSameDay, isToday, parseISO } from 'date-fns'
+import {
+  format, addMonths, startOfMonth, endOfMonth,
+  startOfWeek, endOfWeek, eachDayOfInterval,
+  isSameDay, isToday, isSameMonth,
+} from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Lock, Unlock, Clock } from 'lucide-react'
 import { calendarApi } from '@/lib/api'
@@ -7,17 +11,21 @@ import { cn } from '@/lib/utils'
 
 const WEEK_DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
+function buildMonthGrid(date) {
+  const start = startOfWeek(startOfMonth(date), { weekStartsOn: 1 })
+  const end = endOfWeek(endOfMonth(date), { weekStartsOn: 1 })
+  return eachDayOfInterval({ start, end })
+}
+
 export default function CalendarPage() {
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [slots, setSlots] = useState([])
   const [blockedDates, setBlockedDates] = useState([])
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [togglingDate, setTogglingDate] = useState(false)
 
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-
+  const monthDays = buildMonthGrid(currentMonth)
   const selectedStr = format(selectedDate, 'yyyy-MM-dd')
   const isBlocked = blockedDates.includes(selectedStr)
 
@@ -26,7 +34,7 @@ export default function CalendarPage() {
       setLoadingSlots(true)
       try {
         const { data } = await calendarApi.getAvailability(selectedStr)
-        setSlots(data)
+        setSlots(data.slots ?? [])
       } catch {
         setSlots([])
       } finally {
@@ -53,56 +61,62 @@ export default function CalendarPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl animate-fade-in">
-      <div className="grid lg:grid-cols-3 gap-5">
-        {/* Calendario semanal */}
+      <div className="grid lg:grid-cols-3 gap-5 items-start">
+        {/* Calendario mensual */}
         <div className="lg:col-span-2 card p-5">
-          {/* Nav semana */}
+          {/* Nav mes */}
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-display text-base font-semibold text-slate-800 capitalize">
-              {format(weekStart, "MMMM yyyy", { locale: es })}
+              {format(currentMonth, "MMMM yyyy", { locale: es })}
             </h3>
             <div className="flex gap-1">
               <button
-                onClick={() => setCurrentDate((d) => addDays(d, -7))}
+                onClick={() => setCurrentMonth((d) => addMonths(d, -1))}
                 className="btn-ghost p-1.5"
-                aria-label="Semana anterior"
+                aria-label="Mes anterior"
               >
                 <ChevronLeft size={16} />
               </button>
               <button
-                onClick={() => setCurrentDate(new Date())}
+                onClick={() => { setCurrentMonth(new Date()); setSelectedDate(new Date()) }}
                 className="btn-secondary px-3 py-1.5 text-xs"
               >
                 Hoy
               </button>
               <button
-                onClick={() => setCurrentDate((d) => addDays(d, 7))}
+                onClick={() => setCurrentMonth((d) => addMonths(d, 1))}
                 className="btn-ghost p-1.5"
-                aria-label="Semana siguiente"
+                aria-label="Mes siguiente"
               >
                 <ChevronRight size={16} />
               </button>
             </div>
           </div>
 
-          {/* Días */}
-          <div className="grid grid-cols-7 gap-1.5">
+          {/* Cabecera días */}
+          <div className="grid grid-cols-7 gap-1 mb-1">
             {WEEK_DAYS.map((d) => (
-              <div key={d} className="text-center text-xs font-medium text-slate-400 pb-1.5">{d}</div>
+              <div key={d} className="text-center text-xs font-medium text-slate-400 pb-1">{d}</div>
             ))}
-            {weekDays.map((day) => {
+          </div>
+
+          {/* Días del mes */}
+          <div className="grid grid-cols-7 gap-1">
+            {monthDays.map((day) => {
               const dayStr = format(day, 'yyyy-MM-dd')
               const selected = isSameDay(day, selectedDate)
               const today = isToday(day)
               const blocked = blockedDates.includes(dayStr)
+              const otherMonth = !isSameMonth(day, currentMonth)
 
               return (
                 <button
                   key={dayStr}
                   onClick={() => setSelectedDate(day)}
                   className={cn(
-                    'relative flex flex-col items-center justify-center rounded-xl py-3 px-1 text-sm font-medium transition-all duration-150',
+                    'relative flex flex-col items-center justify-center rounded-lg aspect-square text-sm font-medium transition-all duration-150',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
+                    otherMonth && 'opacity-25 pointer-events-none',
                     selected
                       ? 'bg-primary-600 text-white shadow-sm'
                       : blocked
@@ -114,9 +128,9 @@ export default function CalendarPage() {
                   aria-pressed={selected}
                   aria-label={`${format(day, 'd MMMM', { locale: es })}${blocked ? ', bloqueado' : ''}`}
                 >
-                  <span className="text-base leading-none">{format(day, 'd')}</span>
+                  <span className="leading-none">{format(day, 'd')}</span>
                   {blocked && !selected && (
-                    <Lock size={9} className="mt-1 opacity-50" />
+                    <Lock size={8} className="mt-0.5 opacity-50" />
                   )}
                 </button>
               )
@@ -198,7 +212,7 @@ export default function CalendarPage() {
               <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto pr-1">
                 {slots.map((slot) => (
                   <div
-                    key={slot.time}
+                    key={slot.time_start}
                     className={cn(
                       'flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm border transition-colors',
                       slot.available > 0
@@ -206,7 +220,7 @@ export default function CalendarPage() {
                         : 'bg-slate-50 border-border text-slate-400',
                     )}
                   >
-                    <span className="font-medium">{slot.time?.slice(0, 5)}</span>
+                    <span className="font-medium">{slot.time_start?.slice(0, 5)}</span>
                     <span className="text-xs">
                       {slot.available > 0
                         ? `${slot.available} libre${slot.available > 1 ? 's' : ''}`

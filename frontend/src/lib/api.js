@@ -50,6 +50,20 @@ export const reservationsApi = {
   delete: (id) => api.delete(`/reservations/${id}`),
 }
 
+export const serviceApi = {
+  list: () => api.get('/business/me/services'),
+  create: (data) => api.post('/business/me/services', data),
+  update: (id, data) => api.put(`/business/me/services/${id}`, data),
+  remove: (id) => api.delete(`/business/me/services/${id}`),
+}
+
+export const tableApi = {
+  list: () => api.get('/business/me/tables'),
+  create: (data) => api.post('/business/me/tables', data),
+  update: (id, data) => api.put(`/business/me/tables/${id}`, data),
+  remove: (id) => api.delete(`/business/me/tables/${id}`),
+}
+
 export const calendarApi = {
   getAvailability: (date) => api.get('/calendar/availability', { params: { date } }),
   getAvailabilityRange: (start, end) =>

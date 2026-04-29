@@ -26,6 +26,8 @@ class Reservation(Base):
         default="manual",
     )
     notes = Column(String, nullable=True)
+    table_type_id = Column(Integer, ForeignKey("table_types.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(Date, server_default=func.current_date())
 
     business = relationship("Business", back_populates="reservations")
+    table_type = relationship("TableType")

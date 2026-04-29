@@ -46,3 +46,50 @@ class BusinessConfigUpdate(BaseModel):
     assistant_name: str | None = None
     tone: str | None = None
     welcome_message: str | None = None
+
+
+class TableTypeCreate(BaseModel):
+    capacity: int
+    quantity: int
+    label: str | None = None
+
+
+class TableTypeUpdate(BaseModel):
+    capacity: int | None = None
+    quantity: int | None = None
+    label: str | None = None
+
+
+class TableTypeRead(BaseModel):
+    id: int
+    capacity: int
+    quantity: int
+    label: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class ServiceCreate(BaseModel):
+    name: str
+    description: str | None = None
+    price: float | None = None
+    duration_minutes: int | None = None
+
+
+class ServiceUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    price: float | None = None
+    duration_minutes: int | None = None
+    is_active: bool | None = None
+
+
+class ServiceRead(BaseModel):
+    id: int
+    name: str
+    description: str | None
+    price: float | None
+    duration_minutes: int | None
+    is_active: bool
+
+    model_config = {"from_attributes": True}

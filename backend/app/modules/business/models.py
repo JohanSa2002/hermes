@@ -1,11 +1,13 @@
 from datetime import date, time
 
 from sqlalchemy import (
+    Boolean,
     Column,
     Date,
     Enum,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Time,
     func,
@@ -41,6 +43,8 @@ class Business(Base):
     users = relationship("User", back_populates="business", cascade="all, delete-orphan")
     config = relationship("BusinessConfig", back_populates="business", uselist=False)
     reservations = relationship("Reservation", back_populates="business")
+    table_types = relationship("TableType", back_populates="business", cascade="all, delete-orphan")
+    services = relationship("Service", back_populates="business", cascade="all, delete-orphan")
 
 
 class BusinessConfig(Base):
@@ -63,3 +67,33 @@ class BusinessConfig(Base):
     welcome_message = Column(String, nullable=True)
 
     business = relationship("Business", back_populates="config")
+
+
+class TableType(Base):
+    __tablename__ = "table_types"
+
+    id = Column(Integer, primary_key=True, index=True)
+    business_id = Column(
+        Integer, ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    capacity = Column(Integer, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    label = Column(String, nullable=True)
+
+    business = relationship("Business", back_populates="table_types")
+
+
+class Service(Base):
+    __tablename__ = "services"
+
+    id = Column(Integer, primary_key=True, index=True)
+    business_id = Column(
+        Integer, ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    price = Column(Numeric(10, 2), nullable=True)
+    duration_minutes = Column(Integer, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    business = relationship("Business", back_populates="services")

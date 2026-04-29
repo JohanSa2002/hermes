@@ -10,8 +10,8 @@ from app.core.config import settings
 from app.modules.bot_engine.prompt import build_system_prompt
 from app.modules.bot_engine.schemas import BotResponse, CollectedData, ConversationContext
 from app.modules.business.models import Business
-from app.modules.business.service import get_business_config
-from app.modules.calendar.service import get_available_slots
+from app.modules.business.service import get_business_config, list_services, list_table_types
+from app.modules.calendar.service import get_available_slots, get_available_slots_for_party
 from app.modules.reservations.schemas import ReservationCreate
 from app.modules.reservations.service import create_reservation
 from app.modules.whatsapp.client import send_text_message
@@ -106,17 +106,27 @@ async def process_message(
     try:
         context = await _load_context(redis, business.id, phone)
         config = await get_business_config(db, business.id)
+        table_types = await list_table_types(db, business.id)
+        services = await list_services(db, business.id)
 
         availability = None
         if context.collected_data.date:
             try:
-                availability = await get_available_slots(
-                    db, redis, business.id, date.fromisoformat(context.collected_data.date)
-                )
+                party_size = context.collected_data.party_size or 1
+                if table_types:
+                    availability = await get_available_slots_for_party(
+                        db, redis, business.id,
+                        date.fromisoformat(context.collected_data.date),
+                        party_size,
+                    )
+                else:
+                    availability = await get_available_slots(
+                        db, redis, business.id, date.fromisoformat(context.collected_data.date)
+                    )
             except Exception:
                 pass
 
-        system_prompt = build_system_prompt(business, config, availability, context)
+        system_prompt = build_system_prompt(business, config, availability, context, table_types, services)
 
         context.messages.append({"role": "user", "content": text})
 
