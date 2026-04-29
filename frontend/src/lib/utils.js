@@ -51,6 +51,7 @@ export const BUSINESS_TYPES = [
 ]
 
 export const TIMEZONES = [
+  { value: 'America/Panama', label: 'Panamá (UTC-5)' },
   { value: 'America/Bogota', label: 'Bogotá (UTC-5)' },
   { value: 'America/Mexico_City', label: 'Ciudad de México (UTC-6)' },
   { value: 'America/Lima', label: 'Lima (UTC-5)' },
