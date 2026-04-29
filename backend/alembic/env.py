@@ -1,5 +1,10 @@
 import asyncio
+import sys
 from logging.config import fileConfig
+
+# Windows + asyncpg requiere SelectorEventLoop (no ProactorEventLoop)
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
